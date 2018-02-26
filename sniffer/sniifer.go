@@ -56,7 +56,7 @@ func NewSniffer() *Sniffer {
 		DataBits:          8,
 		StopBits:          1,
 		RTSCTSFlowControl: true,
-		MinimumReadSize:   1,
+		InterCharacterTimeout:   1000,
 	}
 	port, err := serial.Open(options)
 	if err != nil {
