@@ -76,12 +76,25 @@ func (s *Sniffer) Close() {
 	s.port.Close()
 }
 
-func (s *Sniffer) Ping() {
+func (s *Sniffer) Ping(ctx context.Context) (*PingResponse, error) {
 	s.sendCommand(PING_REQ, nil)
+	rsp, err := s.waitForPacket(ctx, PING_RESP)
+	if err != nil {
+		return nil, err
+	}
+	return rsp.PingResponse, nil
 }
 
-func (s *Sniffer) Scan() {
+func (s *Sniffer) Scan(ctx context.Context) (*ScanResponse, error) {
 	s.sendCommand(REQ_SCAN_CONT, nil)
+	if false { // TODO: it seems that the firmware won't send scan response
+		rsp, err := s.waitForPacket(ctx, RESP_SCAN_CONT)
+		if err != nil {
+			return nil, err
+		}
+		return rsp.ScanResponse, nil
+	}
+	return nil, nil
 }
 
 func (s *Sniffer) sendCommand(cmd int, payload []byte) {
@@ -109,20 +122,18 @@ func (s *Sniffer) ReadPacket() (*Packet, error) {
 
 func (s *Sniffer) ScanDevices(scanDuration time.Duration) ([]*Device, error) {
 	ctx, _ := context.WithTimeout(context.Background(), scanDuration)
-	s.Ping()
-	if rsp, err := s.waitForPacket(ctx, PING_RESP); err != nil {
+	if _, err := s.Ping(ctx); err != nil {
 		return nil, err
-	} else {
-		log.Printf("Firmware version: %d", rsp.FirmwareVersion)
+	}
+	if _, err := s.Scan(ctx); err != nil {
+		return nil, err
 	}
 
 	s.clearDevices()
-	s.Scan()
-
 	for {
 		select {
 		case <-ctx.Done():
-			return s.devices, ctx.Err()
+			return s.devices, nil
 		default:
 			event, _ := s.waitForPacket(ctx, EVENT_PACKET)
 			if device := NewDevice(event); device != nil {

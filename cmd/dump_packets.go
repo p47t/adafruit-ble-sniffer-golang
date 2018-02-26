@@ -11,7 +11,11 @@ func main() {
 	defer s.Close()
 
 	log.Printf("Scanning devices (5s)...")
-	devices, _ := s.ScanDevices(5 * time.Second)
+	devices, err := s.ScanDevices(5 * time.Second)
+	if err != nil {
+		log.Printf("failed to scan device: %v", err)
+		return
+	}
 	log.Printf("Found %d devices", len(devices))
 
 	for {
