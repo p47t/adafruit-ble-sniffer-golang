@@ -2,12 +2,14 @@ package main
 
 import (
 	"log"
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
+	"os"
 	"time"
+
+	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
 )
 
 func main() {
-	s := sniffer.NewSniffer()
+	s := sniffer.NewSniffer(os.Args[1])
 	defer s.Close()
 
 	log.Printf("Scanning devices (5s)...")
@@ -19,7 +21,7 @@ func main() {
 	log.Printf("Found %d devices", len(devices))
 
 	for {
-		p, err := s.WaitForPacket(sniffer.EVENT_PACKET, 1 * time.Second)
+		p, err := s.WaitForPacket(sniffer.EVENT_PACKET, 1*time.Second)
 		if err != nil {
 			log.Printf("Failed to read: %v", err)
 			continue

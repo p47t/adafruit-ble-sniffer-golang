@@ -2,12 +2,13 @@ package sniffer
 
 import "io"
 import (
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/slip"
-	"github.com/jacobsa/go-serial/serial"
-	"log"
 	"bytes"
-	"time"
 	"context"
+	"log"
+	"time"
+
+	"github.com/jacobsa/go-serial/serial"
+	"github.com/yinghau76/adafruit-ble-sniffer-golang/slip"
 )
 
 const (
@@ -49,14 +50,14 @@ type Sniffer struct {
 	devices []*Device
 }
 
-func NewSniffer() *Sniffer {
+func NewSniffer(portName string) *Sniffer {
 	options := serial.OpenOptions{
-		PortName:          "/dev/cu.SLAB_USBtoUART",
-		BaudRate:          460800,
-		DataBits:          8,
-		StopBits:          1,
-		RTSCTSFlowControl: true,
-		InterCharacterTimeout:   1000,
+		PortName:              portName,
+		BaudRate:              460800,
+		DataBits:              8,
+		StopBits:              1,
+		RTSCTSFlowControl:     true,
+		InterCharacterTimeout: 1000,
 	}
 	port, err := serial.Open(options)
 	if err != nil {
@@ -121,7 +122,8 @@ func (s *Sniffer) ReadPacket() (*Packet, error) {
 }
 
 func (s *Sniffer) ScanDevices(scanDuration time.Duration) ([]*Device, error) {
-	ctx, _ := context.WithTimeout(context.Background(), scanDuration)
+	ctx, cancel := context.WithTimeout(context.Background(), scanDuration)
+	defer cancel()
 	if _, err := s.Ping(ctx); err != nil {
 		return nil, err
 	}
@@ -144,7 +146,8 @@ func (s *Sniffer) ScanDevices(scanDuration time.Duration) ([]*Device, error) {
 }
 
 func (s *Sniffer) WaitForPacket(packetId int, timeout time.Duration) (*Packet, error) {
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	return s.waitForPacket(ctx, packetId)
 }
 
