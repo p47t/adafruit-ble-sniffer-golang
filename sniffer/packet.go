@@ -95,7 +95,7 @@ func parsePacket(p []byte) (*Packet, error) {
 			h.Len, h.StaticHeader.Len, h.StaticHeader.PayloadLen)
 	}
 
-	switch (h.Id) {
+	switch h.Id {
 	case EVENT_PACKET:
 		h.EventPacketHeader = &EventPacketHeader{
 			Len:          p[6],
@@ -113,7 +113,7 @@ func parsePacket(p []byte) (*Packet, error) {
 	case EVENT_ERROR:
 	case PING_RESP:
 		h.PingResponse = &PingResponse{
-			FirmwareVersion: int(p[6]) | int(p[7]) << 8,
+			FirmwareVersion: int(p[6]) | int(p[7])<<8,
 		}
 	case RESP_SCAN_CONT:
 		h.ScanResponse = &ScanResponse{}
