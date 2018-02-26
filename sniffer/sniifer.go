@@ -5,6 +5,9 @@ import (
 	"github.com/yinghau76/adafruit-ble-sniffer-golang/slip"
 	"github.com/jacobsa/go-serial/serial"
 	"log"
+	"bytes"
+	"time"
+	"context"
 )
 
 const (
@@ -42,7 +45,8 @@ type Sniffer struct {
 	wr *slip.SlipWriter
 	rd *slip.SlipReader
 
-	buf []byte
+	buf     []byte
+	devices []*Device
 }
 
 func NewSniffer() *Sniffer {
@@ -81,7 +85,6 @@ func (s *Sniffer) Scan() {
 }
 
 func (s *Sniffer) sendCommand(cmd int, payload []byte) {
-	log.Printf("writeCommand: %d\n", cmd)
 	packet := make([]byte, 0, 32)
 	packet = append(packet, 6) // header length
 	packet = append(packet, byte(len(payload)))
@@ -102,4 +105,63 @@ func (s *Sniffer) ReadPacket() (*Packet, error) {
 		return nil, err
 	}
 	return parsePacket(s.buf[:l])
+}
+
+func (s *Sniffer) ScanDevices(scanDuration time.Duration) ([]*Device, error) {
+	ctx, _ := context.WithTimeout(context.Background(), scanDuration)
+	s.Ping()
+	if rsp, err := s.waitForPacket(ctx, PING_RESP); err != nil {
+		return nil, err
+	} else {
+		log.Printf("Firmware version: %d", rsp.FirmwareVersion)
+	}
+
+	s.clearDevices()
+	s.Scan()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return s.devices, ctx.Err()
+		default:
+			event, _ := s.waitForPacket(ctx, EVENT_PACKET)
+			if device := NewDevice(event); device != nil {
+				s.addOrUpdateDevice(device)
+			}
+		}
+	}
+}
+
+func (s *Sniffer) WaitForPacket(packetId int, timeout time.Duration) (*Packet, error) {
+	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	return s.waitForPacket(ctx, packetId)
+}
+
+func (s *Sniffer) waitForPacket(ctx context.Context, packetId int) (*Packet, error) {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			p, err := s.ReadPacket()
+			if err == nil && p.Id == byte(packetId) {
+				return p, nil
+			}
+		}
+	}
+}
+
+func (s *Sniffer) clearDevices() {
+	s.devices = []*Device{}
+}
+
+func (s *Sniffer) addOrUpdateDevice(device *Device) {
+	for i, dev := range s.devices {
+		if bytes.Compare(dev.Address, device.Address) == 0 {
+			s.devices[i] = device
+			return
+		}
+	}
+
+	s.devices = append(s.devices, device)
 }
