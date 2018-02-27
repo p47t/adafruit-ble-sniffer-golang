@@ -1,6 +1,11 @@
 package sniffer
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+
+	"github.com/davecgh/go-spew/spew"
+)
 
 type StaticHeader struct {
 	Len         byte
@@ -88,7 +93,15 @@ func parsePacket(p []byte) (*Packet, error) {
 			EventCounter: int(p[10]) | int(p[11])<<8,
 			Timestamp:    int(p[12]) | int(p[13])<<8 | int(p[14])<<16 | int(p[15])<<24,
 		}
-		h.EventPacketHeader.BlePacket = parseBlePacket(p[16 : 16+h.StaticHeader.PayloadLen-h.EventPacketHeader.Len])
+
+		// The hardware adds a padding byte which isn't sent on air.
+		// The following removes it.
+		p[1] -= 1
+		h.PayloadLen -= 1
+		copy(p[22:len(p)-1], p[23:len(p)])
+
+		h.EventPacketHeader.BlePacket = parseBlePacket(p[16 : 16+h.PayloadLen-h.EventPacketHeader.Len])
+
 	case EVENT_CONNECT:
 	case EVENT_DEVICE:
 	case EVENT_DISCONNECT:
@@ -109,24 +122,31 @@ func parsePacket(p []byte) (*Packet, error) {
 func parseBlePacket(p []byte) *BlePacket {
 	l := len(p)
 
-	// TODO: don't know why there is an extra 0 at p[6]
-	copy(p[6:l-1], p[7:l])
-
 	blep := &BlePacket{
 		AccessAddr: p[0:4],
 		AdvType:    p[4] & 0x0f,
 		TxAddType:  p[4] & 0x40,
 		RxAddType:  p[4] & 0x80,
-		AdvDataLen: p[5],
-		AdvData:    p[6 : l-3],
-		CRC:        int(p[l-3]) | int(p[l-2])<<8 | int(p[l-1])<<16,
 	}
 
 	switch blep.AdvType {
 	case BLE_ADV_IND, BLE_ADV_DIRECT_IND, BLE_ADV_NONCONN_IND, BLE_SCAN_RSP, BLE_ADV_SCAN_IDN:
-		blep.AdvAddr = p[6:12]
+		if len(p) >= 12 {
+			blep.AdvDataLen = p[5]
+			blep.AdvData = p[6 : l-3]
+			blep.CRC = int(p[l-3]) | int(p[l-2])<<8 | int(p[l-1])<<16
+			blep.AdvAddr = p[6:12]
+		} else {
+			log.Printf("Unexpected length for AdvType %d", blep.AdvType)
+			spew.Dump(p)
+		}
 	case BLE_SCAN_REQ, BLE_CONNECT_REQ:
-		blep.AdvAddr = p[12:18]
+		if len(p) >= 18 {
+			blep.AdvAddr = p[12:18]
+		} else {
+			log.Printf("Unexpected length for AdvType %d", blep.AdvType)
+			spew.Dump(p)
+		}
 	}
 	return blep
 }
