@@ -77,7 +77,7 @@ func (s *Sniffer) Close() {
 	s.port.Close()
 }
 
-func (s *Sniffer) Ping(ctx context.Context) (*PingResponse, error) {
+func (s *Sniffer) ping(ctx context.Context) (*PingResponse, error) {
 	s.sendCommand(PING_REQ, nil)
 	rsp, err := s.waitForPacket(ctx, PING_RESP)
 	if err != nil {
@@ -86,16 +86,25 @@ func (s *Sniffer) Ping(ctx context.Context) (*PingResponse, error) {
 	return rsp.PingResponse, nil
 }
 
-func (s *Sniffer) Scan(ctx context.Context) (*ScanResponse, error) {
+func (s *Sniffer) scan(ctx context.Context) (*ScanResponse, error) {
 	s.sendCommand(REQ_SCAN_CONT, nil)
-	if false { // TODO: it seems that the firmware won't send scan response
-		rsp, err := s.waitForPacket(ctx, RESP_SCAN_CONT)
-		if err != nil {
-			return nil, err
-		}
-		return rsp.ScanResponse, nil
-	}
 	return nil, nil
+}
+
+func (s *Sniffer) follow(ctx context.Context, addr []byte, followOnlyAdvertisements bool) (*FollowResponse, error) {
+	var payload []byte
+	payload = append(payload, addr...)
+	if followOnlyAdvertisements {
+		payload = append(payload, 1)
+	} else {
+		payload = append(payload, 0)
+	}
+	s.sendCommand(REQ_FOLLOW, payload)
+	rsp, err := s.waitForPacket(ctx, RESP_FOLLOW)
+	if err != nil {
+		return nil, err
+	}
+	return rsp.FollowResponse, nil
 }
 
 func (s *Sniffer) sendCommand(cmd int, payload []byte) {
@@ -113,6 +122,17 @@ func (s *Sniffer) sendCommand(cmd int, payload []byte) {
 	s.commandPacketCount++
 }
 
+func (s *Sniffer) Follow(addr []byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := s.follow(ctx, addr, false)
+	return err
+}
+
+func (s *Sniffer) ReadRaw(p []byte) (int, error) {
+	return s.port.Read(p)
+}
+
 func (s *Sniffer) ReadPacket() (*Packet, error) {
 	l, err := s.rd.Read(s.buf)
 	if err != nil {
@@ -124,10 +144,10 @@ func (s *Sniffer) ReadPacket() (*Packet, error) {
 func (s *Sniffer) ScanDevices(scanDuration time.Duration) ([]*Device, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), scanDuration)
 	defer cancel()
-	if _, err := s.Ping(ctx); err != nil {
+	if _, err := s.ping(ctx); err != nil {
 		return nil, err
 	}
-	if _, err := s.Scan(ctx); err != nil {
+	if _, err := s.scan(ctx); err != nil {
 		return nil, err
 	}
 

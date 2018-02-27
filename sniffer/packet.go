@@ -54,12 +54,16 @@ type PingResponse struct {
 type ScanResponse struct {
 }
 
+type FollowResponse struct {
+}
+
 type Packet struct {
 	Len int
 	StaticHeader
 	*EventPacketHeader
 	*PingResponse
 	*ScanResponse
+	*FollowResponse
 	RawBytes []byte
 }
 
