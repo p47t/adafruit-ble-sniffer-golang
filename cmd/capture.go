@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"log"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -16,7 +18,7 @@ var captureCmd = &cobra.Command{
 	Long:  `Capture packets into specified file format`,
 	Run: func(cmd *cobra.Command, args []string) {
 		captureOutput, _ := cmd.Flags().GetString("output")
-		log.Printf("Capture to %s", captureOutput)
+		log.Printf("capture to %s", captureOutput)
 
 		w, err := pcap.NewPcapWriter(captureOutput)
 		if err != nil {
@@ -28,17 +30,28 @@ var captureCmd = &cobra.Command{
 		s := sniffer.NewSniffer(portName)
 		defer s.Close()
 
+		interrupt := make(chan os.Signal, 1)
+		signal.Notify(interrupt, os.Interrupt)
+		defer signal.Stop(interrupt)
+
 		for {
 			p, err := s.WaitForPacket(sniffer.EVENT_PACKET, 1*time.Second)
 			if err != nil {
-				log.Printf("Failed to read packet: %v", err)
+				log.Printf("failed to read packet: %v", err)
 				continue
 			}
-			log.Printf("Write packet of %d bytes", len(p.RawBytes))
+			log.Printf("write packet of %d bytes", len(p.RawBytes))
 			_, err = w.Write(p.RawBytes)
 			if err != nil {
-				log.Printf("Failed to write packet: %v", err)
+				log.Printf("failed to write packet: %v", err)
 				return
+			}
+
+			select {
+			case <-interrupt:
+				log.Printf("interrupted by user")
+				return
+			default:
 			}
 		}
 	},
