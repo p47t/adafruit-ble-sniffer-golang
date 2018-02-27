@@ -141,14 +141,14 @@ func parseBlePacket(p []byte) *BlePacket {
 			blep.CRC = int(p[l-3]) | int(p[l-2])<<8 | int(p[l-1])<<16
 			blep.AdvAddr = p[6:12]
 		} else {
-			log.Printf("Unexpected length for AdvType %d", blep.AdvType)
+			log.Printf("unexpected length for AdvType %d", blep.AdvType)
 			spew.Dump(p)
 		}
 	case BLE_SCAN_REQ, BLE_CONNECT_REQ:
 		if len(p) >= 18 {
 			blep.AdvAddr = p[12:18]
 		} else {
-			log.Printf("Unexpected length for AdvType %d", blep.AdvType)
+			log.Printf("unexpected length for AdvType %d", blep.AdvType)
 			spew.Dump(p)
 		}
 	}

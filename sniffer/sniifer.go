@@ -117,7 +117,7 @@ func (s *Sniffer) sendCommand(cmd int, payload []byte) {
 	packet = append(packet, payload...)
 
 	if _, err := s.wr.Write(packet); err != nil {
-		log.Fatalf("Failed to write: %v", err)
+		log.Fatalf("failed to write: %v", err)
 	}
 	s.commandPacketCount++
 }

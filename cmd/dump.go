@@ -23,7 +23,7 @@ var dumpCmd = &cobra.Command{
 			for {
 				n, err := s.ReadRaw(p)
 				if err != nil {
-					log.Printf("Failed to read: %v", err)
+					log.Printf("failed to read: %v", err)
 					return
 				}
 				spew.Dump(p[0:n])
@@ -32,7 +32,7 @@ var dumpCmd = &cobra.Command{
 			for {
 				p, err := s.WaitForPacket(sniffer.EVENT_PACKET, 1*time.Second)
 				if err != nil {
-					log.Printf("Failed to read: %v", err)
+					log.Printf("failed to read: %v", err)
 					continue
 				}
 				h := &p.StaticHeader
