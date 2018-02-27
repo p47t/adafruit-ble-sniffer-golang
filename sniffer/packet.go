@@ -25,30 +25,11 @@ type BlePacket struct {
 	AdvType    byte
 	TxAddType  byte
 	RxAddType  byte
+	AdvDataLen byte
+	AdvData    []byte
+	CRC        int
 
-	Data    []byte
 	AdvAddr []byte
-	CRC     int
-
-	RawBytes []byte
-}
-
-func parseBlePacket(p []byte) *BlePacket {
-	blep := &BlePacket{
-		AccessAddr: p[0:4],
-		AdvType:    p[4] & 0x0f,
-		TxAddType:  p[4] & 0x40,
-		RxAddType:  p[4] & 0x80,
-		Data:       p[5 : len(p)-3],
-		// TODO: CRC
-	}
-	switch blep.AdvType {
-	case BLE_ADV_IND, BLE_ADV_DIRECT_IND, BLE_ADV_NONCONN_IND, BLE_SCAN_RSP, BLE_ADV_SCAN_IDN:
-		blep.AdvAddr = p[6:12]
-	case BLE_SCAN_REQ, BLE_CONNECT_REQ:
-		blep.AdvAddr = p[12:18]
-	}
-	return blep
 }
 
 type EventPacketHeader struct {
@@ -123,4 +104,29 @@ func parsePacket(p []byte) (*Packet, error) {
 
 	h.RawBytes = p[0 : h.StaticHeader.Len+h.StaticHeader.PayloadLen]
 	return &h, nil
+}
+
+func parseBlePacket(p []byte) *BlePacket {
+	l := len(p)
+
+	// TODO: don't know why there is an extra 0 at p[6]
+	copy(p[6:l-1], p[7:l])
+
+	blep := &BlePacket{
+		AccessAddr: p[0:4],
+		AdvType:    p[4] & 0x0f,
+		TxAddType:  p[4] & 0x40,
+		RxAddType:  p[4] & 0x80,
+		AdvDataLen: p[5],
+		AdvData:    p[6 : l-3],
+		CRC:        int(p[l-3]) | int(p[l-2])<<8 | int(p[l-1])<<16,
+	}
+
+	switch blep.AdvType {
+	case BLE_ADV_IND, BLE_ADV_DIRECT_IND, BLE_ADV_NONCONN_IND, BLE_SCAN_RSP, BLE_ADV_SCAN_IDN:
+		blep.AdvAddr = p[6:12]
+	case BLE_SCAN_REQ, BLE_CONNECT_REQ:
+		blep.AdvAddr = p[12:18]
+	}
+	return blep
 }
