@@ -28,24 +28,25 @@ type BlePacket struct {
 
 	Data    []byte
 	AdvAddr []byte
+	CRC     int
 
-	CRC int
+	RawBytes []byte
 }
 
 func parseBlePacket(p []byte) *BlePacket {
 	blep := &BlePacket{
-		AccessAddr: append([]byte{}, p[0:4]...),
+		AccessAddr: p[0:4],
 		AdvType:    p[4] & 0x0f,
 		TxAddType:  p[4] & 0x40,
 		RxAddType:  p[4] & 0x80,
-		Data:       append([]byte{}, p[5:len(p)-3]...),
+		Data:       p[5 : len(p)-3],
 		// TODO: CRC
 	}
 	switch blep.AdvType {
 	case BLE_ADV_IND, BLE_ADV_DIRECT_IND, BLE_ADV_NONCONN_IND, BLE_SCAN_RSP, BLE_ADV_SCAN_IDN:
-		blep.AdvAddr = append([]byte{}, p[6:12]...)
+		blep.AdvAddr = p[6:12]
 	case BLE_SCAN_REQ, BLE_CONNECT_REQ:
-		blep.AdvAddr = append([]byte{}, p[12:18]...)
+		blep.AdvAddr = p[12:18]
 	}
 	return blep
 }
@@ -73,6 +74,7 @@ type Packet struct {
 	*EventPacketHeader
 	*PingResponse
 	*ScanResponse
+	RawBytes []byte
 }
 
 func parsePacket(p []byte) (*Packet, error) {
@@ -103,9 +105,9 @@ func parsePacket(p []byte) (*Packet, error) {
 			Channel:      p[8],
 			RSSI:         p[9],
 			EventCounter: int(p[10]) | int(p[11])<<8,
-			Timestamp:    int(p[12]) | int(p[13])<<8 | int(p[15])<<16 | int(p[16])<<24,
-			BlePacket:    parseBlePacket(p[17:]),
+			Timestamp:    int(p[12]) | int(p[13])<<8 | int(p[14])<<16 | int(p[15])<<24,
 		}
+		h.EventPacketHeader.BlePacket = parseBlePacket(p[16 : 16+h.StaticHeader.PayloadLen-h.EventPacketHeader.Len])
 	case EVENT_CONNECT:
 	case EVENT_DEVICE:
 	case EVENT_DISCONNECT:
@@ -119,5 +121,6 @@ func parsePacket(p []byte) (*Packet, error) {
 		h.ScanResponse = &ScanResponse{}
 	}
 
+	h.RawBytes = p[0 : h.StaticHeader.Len+h.StaticHeader.PayloadLen]
 	return &h, nil
 }
