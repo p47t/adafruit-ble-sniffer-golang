@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
 )
@@ -24,7 +25,9 @@ var dumpCmd = &cobra.Command{
 				continue
 			}
 			h := &p.StaticHeader
-			log.Printf("HeaderLen: %d, PayloadLen: %d, ProtoVer: %d, PacketCount: %d, id: %d", h.Len, h.PayloadLen, h.ProtoVer, h.PacketCount, h.Id)
+			log.Printf("HeaderLen: %d, PayloadLen: %d, ProtoVer: %d, PacketCount: %d, id: %d, Len: %d",
+				h.Len, h.PayloadLen, h.ProtoVer, h.PacketCount, h.Id, len(p.EventPacketHeader.BlePacket.AdvData))
+			spew.Dump(p.RawBytes)
 		}
 	},
 }

@@ -36,7 +36,6 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.ble-sniffer.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&portName, "port", "p", "", "serial port to communicate with sniffer dongle")
-	rootCmd.MarkFlagRequired("port")
 }
 
 // initConfig reads in config file and ENV variables if set.

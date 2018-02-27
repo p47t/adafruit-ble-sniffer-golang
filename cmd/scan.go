@@ -14,7 +14,7 @@ var scanSeconds int32
 var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan BLE devices",
-	Long:  `Scan BLE devices`,
+	Long:  `Scan BLE devices for specified duration`,
 	Run: func(cmd *cobra.Command, args []string) {
 		s := sniffer.NewSniffer(portName)
 		defer s.Close()
