@@ -18,20 +18,33 @@ var dumpCmd = &cobra.Command{
 		s := sniffer.NewSniffer(portName)
 		defer s.Close()
 
-		for {
-			p, err := s.WaitForPacket(sniffer.EVENT_PACKET, 1*time.Second)
-			if err != nil {
-				log.Printf("Failed to read: %v", err)
-				continue
+		if dumpRawInput, _ := cmd.Flags().GetBool("raw"); dumpRawInput {
+			var p = make([]byte, 1024)
+			for {
+				n, err := s.ReadRaw(p)
+				if err != nil {
+					log.Printf("Failed to read: %v", err)
+					return
+				}
+				spew.Dump(p[0:n])
 			}
-			h := &p.StaticHeader
-			log.Printf("HeaderLen: %d, PayloadLen: %d, ProtoVer: %d, PacketCount: %d, id: %d, Len: %d",
-				h.Len, h.PayloadLen, h.ProtoVer, h.PacketCount, h.Id, len(p.EventPacketHeader.BlePacket.AdvData))
-			spew.Dump(p.RawBytes)
+		} else {
+			for {
+				p, err := s.WaitForPacket(sniffer.EVENT_PACKET, 1*time.Second)
+				if err != nil {
+					log.Printf("Failed to read: %v", err)
+					continue
+				}
+				h := &p.StaticHeader
+				log.Printf("HeaderLen: %d, PayloadLen: %d, ProtoVer: %d, PacketCount: %d, id: %d",
+					h.Len, h.PayloadLen, h.ProtoVer, h.PacketCount, h.Id)
+				spew.Dump(p.RawBytes)
+			}
 		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(dumpCmd)
+	dumpCmd.Flags().Bool("raw", false, "Dump raw data (for debugging)")
 }
