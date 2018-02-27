@@ -9,14 +9,13 @@ import (
 	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
 )
 
-var captureOutput string
-
 // captureCmd represents the capture command
 var captureCmd = &cobra.Command{
 	Use:   "capture",
 	Short: "Capture packets",
 	Long:  `Capture packets into specified file format`,
 	Run: func(cmd *cobra.Command, args []string) {
+		captureOutput, _ := cmd.Flags().GetString("output")
 		log.Printf("Capture to %s", captureOutput)
 
 		w, err := pcap.NewPcapWriter(captureOutput)
@@ -47,5 +46,5 @@ var captureCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(captureCmd)
-	captureCmd.Flags().StringVarP(&captureOutput, "output", "o", "capture.pcap", "Capture filename")
+	captureCmd.Flags().StringP("output", "o", "capture.pcap", "Capture filename")
 }
