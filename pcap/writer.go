@@ -77,5 +77,6 @@ func (w *PcapWriter) Write(p []byte) (nn int, err error) {
 }
 
 func (w *PcapWriter) Close() {
+	w.wr.Flush()
 	w.f.Close()
 }
