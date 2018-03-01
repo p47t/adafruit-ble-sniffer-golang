@@ -1,12 +1,10 @@
 package sniffer
 
-import (
-	"fmt"
-)
+import "github.com/yinghau76/adafruit-ble-sniffer-golang/bluetooth"
 
 // Device represents a remote device discovered by scanning
 type Device struct {
-	Address   []byte
+	Address   bluetooth.Address
 	TxAddType byte
 	Name      string
 	RSSI      byte
@@ -17,11 +15,12 @@ func NewDevice(p *Packet) *Device {
 	if p == nil || p.BlePacket == nil || len(p.BlePacket.AdvAddr) == 0 {
 		return nil
 	}
-	addr := p.BlePacket.AdvAddr
+
+	addr := bluetooth.NewBigEndianAddress(p.BlePacket.AdvAddr)
 	return &Device{
 		Address:   addr,
 		TxAddType: p.BlePacket.TxAddType,
-		Name:      fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]),
+		Name:      bluetooth.Address(addr).String(),
 		RSSI:      p.RSSI,
 	}
 }
