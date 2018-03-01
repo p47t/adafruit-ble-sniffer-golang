@@ -17,15 +17,27 @@ var scanCmd = &cobra.Command{
 		s := sniffer.NewSniffer(portName)
 		defer s.Close()
 
-		scanSeconds, _ := cmd.Flags().GetDuration("duration")
-		log.Printf("scanning devices for %v", scanSeconds)
-		devices, err := s.ScanDevices(scanSeconds)
+		scanDuration, _ := cmd.Flags().GetDuration("duration")
+		log.Printf("scanning devices for %v", scanDuration)
+		devices, err := s.ScanDevices(scanDuration)
 		if err != nil {
 			log.Printf("failed to scan device: %v", err)
 			return
 		}
-		log.Printf("found %d devices:", len(devices))
-		for i, dev := range devices {
+
+	wait:
+		for {
+			select {
+			case dev := <-devices:
+				if dev == nil {
+					break wait
+				}
+				log.Printf("found: %s RSSI=-%d", dev.Name, dev.RSSI)
+			}
+		}
+
+		log.Printf("found %d devices totally:", len(s.Devices()))
+		for i, dev := range s.Devices() {
 			log.Printf("#%d: %s RSSI=-%d", i, dev.Name, dev.RSSI)
 		}
 	},

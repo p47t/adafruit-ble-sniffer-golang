@@ -141,28 +141,38 @@ func (s *Sniffer) ReadPacket() (*Packet, error) {
 	return parsePacket(s.buf[:l])
 }
 
-func (s *Sniffer) ScanDevices(scanDuration time.Duration) ([]*Device, error) {
+func (s *Sniffer) ScanDevices(scanDuration time.Duration) (<-chan *Device, error) {
+	devices := make(chan *Device)
+
 	ctx, cancel := context.WithTimeout(context.Background(), scanDuration)
-	defer cancel()
 	if _, err := s.ping(ctx); err != nil {
+		cancel()
 		return nil, err
 	}
 	if _, err := s.scan(ctx); err != nil {
+		cancel()
 		return nil, err
 	}
 
 	s.clearDevices()
-	for {
-		select {
-		case <-ctx.Done():
-			return s.devices, nil
-		default:
-			event, _ := s.waitForPacket(ctx, EVENT_PACKET)
-			if device := NewDevice(event); device != nil {
-				s.addOrUpdateDevice(device)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				cancel()
+				close(devices)
+				return
+			default:
+				event, _ := s.waitForPacket(ctx, EVENT_PACKET)
+				if device := NewDevice(event); device != nil {
+					if s.addOrUpdateDevice(device) {
+						devices <- device
+					}
+				}
 			}
 		}
-	}
+	}()
+	return devices, nil
 }
 
 func (s *Sniffer) WaitForPacket(packetId int, timeout time.Duration) (*Packet, error) {
@@ -185,17 +195,22 @@ func (s *Sniffer) waitForPacket(ctx context.Context, packetId int) (*Packet, err
 	}
 }
 
+func (s *Sniffer) Devices() []*Device {
+	return s.devices
+}
+
 func (s *Sniffer) clearDevices() {
 	s.devices = []*Device{}
 }
 
-func (s *Sniffer) addOrUpdateDevice(device *Device) {
+func (s *Sniffer) addOrUpdateDevice(device *Device) bool {
 	for i, dev := range s.devices {
 		if bytes.Compare(dev.Address, device.Address) == 0 {
 			s.devices[i] = device
-			return
+			return false
 		}
 	}
 
 	s.devices = append(s.devices, device)
+	return true
 }

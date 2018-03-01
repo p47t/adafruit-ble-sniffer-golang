@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// Device represents a remote device discovered by scanning
 type Device struct {
 	Address   []byte
 	TxAddType byte
@@ -11,6 +12,7 @@ type Device struct {
 	RSSI      byte
 }
 
+// NewDevice creates a new device by inspecting information in a sniffed packet
 func NewDevice(p *Packet) *Device {
 	if p == nil || p.BlePacket == nil || len(p.BlePacket.AdvAddr) == 0 {
 		return nil

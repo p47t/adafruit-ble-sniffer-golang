@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"encoding/binary"
+
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -11,7 +13,7 @@ type StaticHeader struct {
 	Len         byte
 	PayloadLen  byte
 	ProtoVer    byte
-	PacketCount int
+	PacketCount uint16
 	Id          byte
 }
 
@@ -42,13 +44,13 @@ type EventPacketHeader struct {
 	Flags        byte
 	Channel      byte
 	RSSI         byte
-	EventCounter int
-	Timestamp    int
+	EventCounter uint16
+	Timestamp    uint32
 	BlePacket    *BlePacket
 }
 
 type PingResponse struct {
-	FirmwareVersion int
+	FirmwareVersion uint16
 }
 
 type ScanResponse struct {
@@ -58,7 +60,6 @@ type FollowResponse struct {
 }
 
 type Packet struct {
-	Len int
 	StaticHeader
 	*EventPacketHeader
 	*PingResponse
@@ -69,7 +70,6 @@ type Packet struct {
 
 func parsePacket(p []byte) (*Packet, error) {
 	h := Packet{
-		Len: len(p),
 		StaticHeader: StaticHeader{
 			Len:        p[0],
 			PayloadLen: p[1],
@@ -77,14 +77,14 @@ func parsePacket(p []byte) (*Packet, error) {
 		},
 	}
 	if h.StaticHeader.Len != 6 {
-		return nil, fmt.Errorf("invalid packet (header len = %d)", h.Len)
+		return nil, fmt.Errorf("invalid packet (header len = %d)", h.StaticHeader.Len)
 	}
 
-	h.PacketCount = int(p[3]) | int(p[4])<<8
+	h.PacketCount = binary.LittleEndian.Uint16(p[3:5])
 	h.Id = p[5]
-	if h.Len != int(h.StaticHeader.Len)+int(h.StaticHeader.PayloadLen) {
+	if len(p) != int(h.StaticHeader.Len)+int(h.StaticHeader.PayloadLen) {
 		return nil, fmt.Errorf("invalid packet: Len = %d, Len = %d, PayloadLen = %d",
-			h.Len, h.StaticHeader.Len, h.StaticHeader.PayloadLen)
+			len(p), h.StaticHeader.Len, h.StaticHeader.PayloadLen)
 	}
 
 	switch h.Id {
@@ -94,14 +94,14 @@ func parsePacket(p []byte) (*Packet, error) {
 			Flags:        p[7],
 			Channel:      p[8],
 			RSSI:         p[9],
-			EventCounter: int(p[10]) | int(p[11])<<8,
-			Timestamp:    int(p[12]) | int(p[13])<<8 | int(p[14])<<16 | int(p[15])<<24,
+			EventCounter: binary.LittleEndian.Uint16(p[10:12]),
+			Timestamp:    binary.LittleEndian.Uint32(p[12:16]),
 		}
 
 		// The hardware adds a padding byte which isn't sent on air.
 		// The following removes it.
-		p[1] -= 1
-		h.PayloadLen -= 1
+		p[1]--
+		h.PayloadLen--
 		copy(p[22:len(p)-1], p[23:len(p)])
 
 		h.EventPacketHeader.BlePacket = parseBlePacket(p[16 : 16+h.PayloadLen-h.EventPacketHeader.Len])
@@ -113,7 +113,7 @@ func parsePacket(p []byte) (*Packet, error) {
 	case EVENT_ERROR:
 	case PING_RESP:
 		h.PingResponse = &PingResponse{
-			FirmwareVersion: int(p[6]) | int(p[7])<<8,
+			FirmwareVersion: binary.LittleEndian.Uint16(p[6:8]),
 		}
 	case RESP_SCAN_CONT:
 		h.ScanResponse = &ScanResponse{}
