@@ -93,7 +93,8 @@ func (s *Sniffer) scan(ctx context.Context) (*ScanResponse, error) {
 
 func (s *Sniffer) follow(ctx context.Context, addr []byte, followOnlyAdvertisements bool) (*FollowResponse, error) {
 	var payload []byte
-	payload = append(payload, addr...)
+	payload = append(payload, addr...)           // addr
+	payload = append(payload, (addr[4]&0x40)>>6) // addr type
 	if followOnlyAdvertisements {
 		payload = append(payload, 1)
 	} else {
