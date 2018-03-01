@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/yinghau76/adafruit-ble-sniffer-golang/bluetooth"
 	"github.com/yinghau76/adafruit-ble-sniffer-golang/pcap"
 	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
 )
@@ -29,6 +30,13 @@ var captureCmd = &cobra.Command{
 
 		s := sniffer.NewSniffer(portName)
 		defer s.Close()
+
+		deviceToFollow, _ := cmd.Flags().GetString("follow")
+		if len(deviceToFollow) > 0 {
+			addr := bluetooth.NewAddress(deviceToFollow)
+			log.Printf("Follow %v", addr)
+			s.Follow(addr)
+		}
 
 		interrupt := make(chan os.Signal, 1)
 		signal.Notify(interrupt, os.Interrupt)
@@ -60,4 +68,5 @@ var captureCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(captureCmd)
 	captureCmd.Flags().StringP("output", "o", "capture.pcap", "Capture filename")
+	captureCmd.Flags().StringP("follow", "f", "", "Device to follow")
 }
