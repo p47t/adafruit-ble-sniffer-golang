@@ -196,8 +196,8 @@ func parseBleDataPacket(p []byte) *BleDataPacket {
 	blep := &BleDataPacket{
 		AccessAddr: p[0:4],
 		LLID:       p[4] & 0x03,
-		NESN:       (p[4] & 0x4) >> 2,
-		SN:         (p[4] & 0x8) >> 3,
+		NESN:       (p[4] & 0x04) >> 2,
+		SN:         (p[4] & 0x08) >> 3,
 		MD:         (p[4] & 0x10) >> 4,
 	}
 	dataLen := p[5]
