@@ -108,6 +108,11 @@ func (s *Sniffer) follow(ctx context.Context, addr []byte, followOnlyAdvertiseme
 	return rsp.FollowResponse, nil
 }
 
+func (s *Sniffer) sendTK() {
+	var temporaryKey [16]byte
+	s.sendCommand(SET_TEMPORARY_KEY, temporaryKey[:])
+}
+
 func (s *Sniffer) sendCommand(cmd int, payload []byte) {
 	packet := make([]byte, 0, 32)
 	packet = append(packet, 6) // header length
@@ -117,6 +122,7 @@ func (s *Sniffer) sendCommand(cmd int, payload []byte) {
 	packet = append(packet, byte(cmd))
 	packet = append(packet, payload...)
 
+	log.Printf("send: %#v", packet)
 	if _, err := s.wr.Write(packet); err != nil {
 		log.Fatalf("failed to write: %v", err)
 	}
@@ -154,6 +160,8 @@ func (s *Sniffer) ScanDevices(scanDuration time.Duration) (<-chan *Device, error
 		cancel()
 		return nil, err
 	}
+
+	s.sendTK()
 
 	s.clearDevices()
 	go func() {

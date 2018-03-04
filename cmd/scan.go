@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"text/template"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -25,6 +26,12 @@ var scanCmd = &cobra.Command{
 			return
 		}
 
+		format, _ := cmd.Flags().GetString("format")
+		infoTpl, err := template.New("DeviceInfo").Parse(format)
+		if err != nil {
+			log.Printf("failed to parse format")
+			return
+		}
 	wait:
 		for {
 			select {
@@ -32,13 +39,13 @@ var scanCmd = &cobra.Command{
 				if dev == nil {
 					break wait
 				}
-				log.Printf("found: %s RSSI=-%d", dev.Name, dev.RSSI)
+				log.Printf("found: %s", dev.StringTpl(infoTpl))
 			}
 		}
 
 		log.Printf("found %d devices totally:", len(s.Devices()))
 		for i, dev := range s.Devices() {
-			log.Printf("#%d: %s RSSI=-%d", i, dev.Name, dev.RSSI)
+			log.Printf("#%d: %s", i, dev.StringTpl(infoTpl))
 		}
 	},
 }
@@ -46,4 +53,5 @@ var scanCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(scanCmd)
 	scanCmd.Flags().DurationP("duration", "d", 5*time.Second, `such as "5s" or "1m"`)
+	scanCmd.Flags().StringP("format", "f", "{{.Name}} RSSI=-{{.RSSI}}", `format string for device information`)
 }

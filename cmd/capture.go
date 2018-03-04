@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/bluetooth"
+	"github.com/yinghau76/adafruit-ble-sniffer-golang/ble"
 	"github.com/yinghau76/adafruit-ble-sniffer-golang/pcap"
 	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
 )
@@ -31,9 +31,21 @@ var captureCmd = &cobra.Command{
 		s := sniffer.NewSniffer(portName)
 		defer s.Close()
 
+		devices, err := s.ScanDevices(5 * time.Second)
+		if err != nil {
+			log.Printf("failed to capture: %v", err)
+			return
+		}
+		for {
+			dev := <-devices
+			if dev == nil {
+				break
+			}
+		}
+
 		deviceToFollow, _ := cmd.Flags().GetString("follow")
 		if len(deviceToFollow) > 0 {
-			addr := bluetooth.NewAddress(deviceToFollow)
+			addr := ble.NewAddress(deviceToFollow)
 			log.Printf("Follow %v", addr)
 			s.Follow(addr)
 		}
