@@ -1,8 +1,8 @@
 package ble
 
-const crc24Init = 0x555555
+// http://ubertooth.blogspot.com/2013/05/speeding-up-crc-calculations-for.html
 
-var btle_crc_lut = [256]uint32{
+var btleCrcLut = [256]uint32{
 	0x000000, 0x01b4c0, 0x036980, 0x02dd40, 0x06d300, 0x0767c0, 0x05ba80, 0x040e40,
 	0x0da600, 0x0c12c0, 0x0ecf80, 0x0f7b40, 0x0b7500, 0x0ac1c0, 0x081c80, 0x09a840,
 	0x1b4c00, 0x1af8c0, 0x182580, 0x199140, 0x1d9f00, 0x1c2bc0, 0x1ef680, 0x1f4240,
@@ -37,16 +37,43 @@ var btle_crc_lut = [256]uint32{
 	0x972200, 0x9696c0, 0x944b80, 0x95ff40, 0x91f100, 0x9045c0, 0x929880, 0x932c40,
 }
 
-/* CRCInit, pointer to start of packet, length of packet in bytes */
-func crc24(crcInit uint32, data []byte) uint32 {
+func Crc24ByLut(crcInit uint32, data []byte) uint32 {
 	state := crcInit
 	for i := 0; i < len(data); i++ {
 		key := uint32(data[i]) ^ (state & 0xff)
-		state = (state >> 8) ^ btle_crc_lut[key]
+		state = (state >> 8) ^ btleCrcLut[key]
 	}
 	return state
 }
 
-func AdvPacketCRC24(d []byte) uint32 {
-	return crc24(crc24Init, d)
+// https://github.com/edrosten/bluez/blob/4094afd1a9ace5e35a6237e9d321589651538447/monitor/crc.c
+
+func Crc24(preset uint32, data []byte) uint32 {
+	state := preset
+
+	for _, cur := range data {
+		for n := 0; n < 8; n++ {
+			nextBit := (state ^ uint32(cur)) & 1
+			cur >>= 1
+			state >>= 1
+			if nextBit != 0 {
+				state |= 1 << 23
+				state ^= 0x5a6000
+			}
+		}
+	}
+	return state
+}
+
+func Crc24BitReverse(value uint32) uint32 {
+	var result uint32
+	var i uint
+	for i = 0; i < 24; i++ {
+		result |= ((value >> i) & 1) << (23 - i)
+	}
+	return result
+}
+
+func AdvCrc24(d []byte) uint32 {
+	return Crc24ByLut(Crc24BitReverse(0x555555), d)
 }
