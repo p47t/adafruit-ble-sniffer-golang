@@ -45,8 +45,15 @@ type BleDataPacket struct {
 	SN         byte
 	MD         byte
 	Data       []byte
-	CRC        int
+	CRC        uint32
 }
+
+const (
+	EventFlagCrcOK     = 0x01
+	EventFlagDirection = 0x02
+	EventFlagEncrypted = 0x04
+	EventFlagMicOK     = 0x08
+)
 
 type EventPacketHeader struct {
 	Len          byte
@@ -107,6 +114,13 @@ func parsePacket(p []byte) (*Packet, error) {
 			Timestamp:    binary.LittleEndian.Uint32(p[12:16]),
 		}
 
+		flags := h.EventPacketHeader.Flags
+		if flags&EventFlagCrcOK == 0 {
+			return nil, fmt.Errorf("packet CRC error: flags = %x", flags)
+		} else if (flags&EventFlagEncrypted) != 0 && (flags&EventFlagMicOK) == 0 {
+			return nil, fmt.Errorf("malformed encrypted packet: flags = %x", flags)
+		}
+
 		// The hardware adds a padding byte which isn't sent on air.
 		// The following removes it.
 		p[1]--
@@ -158,11 +172,11 @@ func parseBleAdvPacket(p []byte) *BleAdvPacket {
 
 			blep.CRC = uint32(p[l-3]) | uint32(p[l-2])<<8 | uint32(p[l-1])<<16
 
-			//crc24 := ble.AdvPacketCRC24(p[4 : l-3])
-			//if crc24 != blep.CRC {
-			//	log.Printf("malformed packet: %x (expected) != %x (actual)", crc24, blep.CRC)
-			//	return nil
-			//}
+			crc24 := ble.AdvCrc24(p[4 : l-3])
+			if crc24 != blep.CRC {
+				log.Printf("malformed packet: %x (expected) != %x (actual)", crc24, blep.CRC)
+				return nil
+			}
 		} else {
 			log.Printf("unexpected length %d for AdvType %d, expect >= 12", len(p), blep.AdvType)
 		}
@@ -188,7 +202,7 @@ func parseBleDataPacket(p []byte) *BleDataPacket {
 	}
 	dataLen := p[5]
 	blep.Data = p[6 : 6+dataLen]
-	blep.CRC = int(p[l-3]) | int(p[l-2])<<8 | int(p[l-1])<<16
+	blep.CRC = uint32(p[l-3]) | uint32(p[l-2])<<8 | uint32(p[l-1])<<16
 
 	return blep
 }
