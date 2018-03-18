@@ -4,7 +4,7 @@ go:
 
 before_install:
     - go get github.com/mattn/goveralls
-    - go get -d -u github.com/golang/dep
+    - go get github.com/golang/dep
 
 install:
     - $GOPATH/bin/dep ensure
