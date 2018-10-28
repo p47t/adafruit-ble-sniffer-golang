@@ -6,10 +6,10 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/p47t/adafruit-ble-sniffer-golang/ble"
+	"github.com/p47t/adafruit-ble-sniffer-golang/pcap"
+	"github.com/p47t/adafruit-ble-sniffer-golang/sniffer"
 	"github.com/spf13/cobra"
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/ble"
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/pcap"
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
 )
 
 // captureCmd represents the capture command

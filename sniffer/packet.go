@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/ble"
+	"github.com/p47t/adafruit-ble-sniffer-golang/ble"
 )
 
 type StaticHeader struct {

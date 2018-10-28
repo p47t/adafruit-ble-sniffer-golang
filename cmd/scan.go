@@ -5,8 +5,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/p47t/adafruit-ble-sniffer-golang/sniffer"
 	"github.com/spf13/cobra"
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/sniffer"
 )
 
 // scanCmd represents the scan command

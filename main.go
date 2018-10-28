@@ -1,6 +1,6 @@
 package main
 
-import "github.com/yinghau76/adafruit-ble-sniffer-golang/cmd"
+import "github.com/p47t/adafruit-ble-sniffer-golang/cmd"
 
 func main() {
 	cmd.Execute()

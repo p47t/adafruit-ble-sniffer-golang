@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/jacobsa/go-serial/serial"
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/slip"
+	"github.com/p47t/adafruit-ble-sniffer-golang/slip"
 )
 
 const (

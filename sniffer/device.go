@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"text/template"
 
-	"github.com/yinghau76/adafruit-ble-sniffer-golang/ble"
+	"github.com/p47t/adafruit-ble-sniffer-golang/ble"
 )
 
 // Device represents a remote device discovered by scanning
